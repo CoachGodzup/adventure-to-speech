@@ -41,6 +41,38 @@ https://iplayif.com/?story=https%3A%2F%2Fgithub.com%2Fi7%2Fcounterfeit-monkey%2F
 1. `about:debugging` → **This Firefox** → **Load Temporary Add-on** → pick `manifest.json`.
 2. Or upload the release zip to `addons.mozilla.org` for a signed build.
 
+## Build from source
+
+No compile step — this is a dependency-free MV3 extension (HTML/CSS/vanilla JS).
+The "build" is just a syntax check + a release zip. It is architecture-independent:
+the same zip works on Mac with Apple Silicon (M1/M2/M3), Intel Mac, Windows, and Linux.
+Use the native arm64 build of Chrome/Firefox on your M1, no Rosetta needed.
+
+Prerequisites (macOS, preinstalled unless noted):
+
+- Chrome and/or Firefox (arm64 build)
+- `zip`, `unzip` (preinstalled on macOS)
+- `node` (optional, for `node --check`) and `python3` (preinstalled, for version lookup)
+
+```bash
+# 1. From the repo root, verify syntax + manifest
+node --check src/*.js
+python3 -c "import json; json.load(open('manifest.json'))"
+
+# 2. Build the release zip (version comes from manifest.json, e.g. 0.1.0)
+VER=$(python3 -c "import json; print(json.load(open('manifest.json'))['version'])")
+zip -r "adventure-to-speech-chrome-$VER.zip" manifest.json src icons README.md LICENSE CHANGELOG.md
+zip -T "adventure-to-speech-chrome-$VER.zip" && unzip -l "adventure-to-speech-chrome-$VER.zip"
+```
+
+Notes:
+
+- `manifest.json` must stay at the top level of the zip; never bundle `node_modules`
+  (only `.opencode/` has npm deps, and it is excluded from the zip).
+- The same zip works for Firefox (upload to `addons.mozilla.org` for a signed build).
+  For local testing no zip is needed: Chrome → `chrome://extensions` → **Load unpacked** → repo folder;
+  Firefox → `about:debugging` → **Load Temporary Add-on** → `manifest.json`.
+
 ## Permissions (why each one)
 
 | Permission | Why |

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adventure To Speech — Settings</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<main class="popup">
+  <h1>Adventure To Speech — Settings</h1>
+
+  <label class="row">
+    <input type="checkbox" id="enabled">
+    <span>Enabled</span>
+  </label>
+
+  <label class="row">
+    <input type="checkbox" id="autoRead">
+    <span>Read new game output automatically</span>
+  </label>
+
+  <label class="row">
+    <input type="checkbox" id="speakCommands">
+    <span>Speak typed commands</span>
+  </label>
+
+  <label class="row">
+    <input type="checkbox" id="onlyMainWindow">
+    <span>Ignore status bar window (recommended)</span>
+  </label>
+
+  <label class="row">
+    <input type="checkbox" id="skipEmptyPrompt">
+    <span>Skip empty prompts</span>
+  </label>
+
+  <label class="col">
+    <span>Voice</span>
+    <select id="voice"></select>
+  </label>
+
+  <label class="col">
+    <span>Language (preferred)</span>
+    <select id="lang">
+      <option value="it-IT">Italiano (it-IT)</option>
+      <option value="en-US">English (US)</option>
+      <option value="en-GB">English (UK)</option>
+      <option value="fr-FR">Français</option>
+      <option value="de-DE">Deutsch</option>
+      <option value="es-ES">Español</option>
+    </select>
+  </label>
+
+  <label class="col">
+    <span>Rate <output id="rateVal" for="rate">1.0</output></span>
+    <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
+  </label>
+
+  <label class="col">
+    <span>Pitch <output id="pitchVal" for="pitch">1.0</output></span>
+    <input type="range" id="pitch" min="0" max="2" step="0.1" value="1">
+  </label>
+
+  <label class="col">
+    <span>Volume <output id="volumeVal" for="volume">1.0</output></span>
+    <input type="range" id="volume" min="0" max="1" step="0.1" value="1">
+  </label>
+
+  <label class="col">
+    <span>Chunk size (120–300 chars)</span>
+    <input type="number" id="chunkSize" min="120" max="300" step="10" value="220">
+  </label>
+
+  <label class="col">
+    <span>Debounce (ms, 100–2000)</span>
+    <input type="number" id="debounceMs" min="100" max="2000" step="50" value="600">
+  </label>
+
+  <p class="hint" id="status">Settings are stored locally (storage.sync); nothing leaves your device.</p>
+</main>
+<script type="module" src="options.js"></script>
+</body>
+</html>

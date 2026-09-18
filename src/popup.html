@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adventure To Speech</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<main class="popup">
+  <h1>Adventure To Speech</h1>
+
+  <label class="row">
+    <input type="checkbox" id="enabled">
+    <span>Enabled</span>
+  </label>
+
+  <label class="row">
+    <input type="checkbox" id="autoRead">
+    <span>Read new game output automatically</span>
+  </label>
+
+  <label class="row">
+    <input type="checkbox" id="speakCommands">
+    <span>Speak typed commands</span>
+  </label>
+
+  <label class="col">
+    <span>Voice</span>
+    <select id="voice"></select>
+  </label>
+
+  <label class="col">
+    <span>Rate <output id="rateVal" for="rate">1.0</output></span>
+    <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
+  </label>
+
+  <label class="col">
+    <span>Pitch <output id="pitchVal" for="pitch">1.0</output></span>
+    <input type="range" id="pitch" min="0" max="2" step="0.1" value="1">
+  </label>
+
+  <label class="col">
+    <span>Volume <output id="volumeVal" for="volume">1.0</output></span>
+    <input type="range" id="volume" min="0" max="1" step="0.1" value="1">
+  </label>
+
+  <div class="row buttons">
+    <button id="readLast" type="button">Read last output</button>
+    <button id="stop" type="button">Stop</button>
+  </div>
+
+  <p class="hint">Click the game page once to enable audio (browser autoplay policy).</p>
+  <p class="hint"><span id="status">Connecting…</span></p>
+  <p class="hint"><a href="options.html" target="_blank" rel="noopener">More settings</a></p>
+</main>
+<script type="module" src="popup.js"></script>
+</body>
+</html>

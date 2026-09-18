@@ -1,0 +1,70 @@
+/* Adventure To Speech - popup styles. Max width 400px per spec. */
+
+:root {
+  color-scheme: light dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.popup {
+  width: 320px;
+  max-width: 400px;
+  padding: 12px 14px 14px;
+}
+
+.popup h1 {
+  font-size: 15px;
+  margin: 0 0 10px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+}
+
+.col > span {
+  display: flex;
+  justify-content: space-between;
+}
+
+select, button {
+  font: inherit;
+}
+
+select {
+  width: 100%;
+}
+
+input[type="range"] {
+  width: 100%;
+}
+
+.buttons {
+  justify-content: space-between;
+  margin-top: 12px;
+}
+
+button {
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.hint {
+  font-size: 12px;
+  opacity: 0.75;
+  margin: 8px 0 0;
+}
