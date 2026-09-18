@@ -14,7 +14,9 @@
 - [ ] `src/options.html` / `options.js` — same as popup plus `onlyMainWindow`, `chunkSize`, `debounceMs`, `lang`
 - [ ] `icons/` — PNG 16/32/48/128 (replace `.gitkeep`; source: one SVG, megaphone + speech bubble)
 - [ ] `manifest.json` cleanup — remove empty `web_accessible_resources: []`
-- [ ] `README.md` — install steps (Chrome + Firefox), test URL, usage, permissions rationale
+- [x] `README.md` — install steps (Chrome + Firefox), test URL, usage, permissions rationale
+- [x] `LICENSE` — BSD 3-Clause
+- [x] `CONTRIBUTING.md` — dev setup, agents/skills workflow, checks
 - [ ] `CHANGELOG.md` — Keep-a-Changelog format, `0.1.0` entry
 - [ ] Manual smoke test passes (`docs/05-test-plan.md`, edge cases E1–E7)
 
