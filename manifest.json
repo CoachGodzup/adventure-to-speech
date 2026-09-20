@@ -6,7 +6,7 @@
   "description": "Reads text adventures aloud (e.g. iplayif.com / Parchment) using the operating system TTS voices. Reads game output iteratively, command after command.",
   "minimum_chrome_version": "88",
   "permissions": ["storage"],
-  "host_permissions": ["*://*.iplayif.com/*"],
+  "host_permissions": ["*://*.iplayif.com/*", "*://xaltotun84.github.io/*"],
   "background": {
     "service_worker": "src/background.js",
     "type": "module"
@@ -29,7 +29,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://*.iplayif.com/*"],
+      "matches": ["*://*.iplayif.com/*", "*://xaltotun84.github.io/*"],
       "js": ["src/content.js"],
       "run_at": "document_idle",
       "all_frames": false

@@ -15,7 +15,10 @@ const DEFAULTS = {
   onlyMainWindow: true,
   chunkSize: 220,
   debounceMs: 600,
-  skipEmptyPrompt: true
+  skipEmptyPrompt: true,
+  ttsBackend: 'os',
+  kokoroVoice: 'af_heart',
+  siteVoices: {}
 };
 
 const api = globalThis.chrome ?? globalThis.browser;

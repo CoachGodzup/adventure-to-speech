@@ -27,6 +27,15 @@ The content script listens on `chrome.runtime.onMessage`:
 | `ATS_STOP` | — | `speechSynthesis.cancel()` + clears queue |
 | `ATS_READ_LAST` | — | re-reads the last 4 `.BufferLine` nodes |
 | `ATS_READ_ALL_VISIBLE` | — | reads all visible text (max 3000 chars) |
+| `ATS_SET` (+`site: true`) | `{patch}` | from the popup on a game tab: merges settings and remembers `patch.voiceURI` for that host in `siteVoices`. Options-page broadcasts carry no flag and never stamp open tabs |
+
+Kokoro runs in-process (content script on game tabs, options page for
+preload) via `src/kokoro/engine.js` — no `ATS_KOKORO_*` runtime messages exist.
+See `docs/08-kokoro.md`.
+
+Supported game hosts: `*://*.iplayif.com/*` (Parchment, e.g. Counterfeit Monkey
+in English) and `*://xaltotun84.github.io/*` (direct Quixe, e.g. Ghost Layer in
+Italian — same GlkOte DOM: `#windowport`, `.BufferWindow`, `.BufferLine`).
 
 Popup/options must use these messages; they must never touch the page DOM directly.
 
@@ -38,7 +47,10 @@ Popup/options must use these messages; they must never touch the page DOM direct
   voiceURI: '', lang: 'it-IT',
   rate: 1.0, pitch: 1.0, volume: 1.0,
   speakCommands: true, onlyMainWindow: true,
-  chunkSize: 220, debounceMs: 600, skipEmptyPrompt: true
+  chunkSize: 220, debounceMs: 600, skipEmptyPrompt: true,
+  siteVoices: {},              // host -> voiceURI (popup picks stick to the site)
+  ttsBackend: 'os',            // 'os' or 'kokoro' (experimental, see docs/08-kokoro.md)
+  kokoroVoice: 'af_heart'      // Kokoro voice id (English-only in v1)
 }
 ```
 

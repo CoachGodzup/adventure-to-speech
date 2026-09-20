@@ -29,6 +29,34 @@ https://iplayif.com/?story=https%3A%2F%2Fgithub.com%2Fi7%2Fcounterfeit-monkey%2F
 2. The intro is read aloud. Type `look` + Enter → you hear `Command: look` plus the room description.
 3. Try `x me`, `inventory`, `help`.
 
+## Voices (e.g. English TTS on an Italian OS)
+
+Yes — the available voices do not depend on your OS language: `speechSynthesis` lists
+every voice installed on the system, and the popup **Voice** menu lets you pick one
+explicitly (saved as `voiceURI`, overriding the `it-IT` default).
+
+1. Install at least one English voice on the OS. On macOS: System Settings →
+   Accessibility → Spoken Content → System voice → Manage Voices → download an
+   English voice (e.g. Samantha). With no English voice installed, ATS falls back
+   to the Italian ones.
+2. In the ATS popup, select that English voice explicitly instead of "Auto"
+   ("Auto" prefers `it-IT`).
+
+Note: per-utterance language detection (English game text vs Italian UI) is planned
+for v0.2.0 — for now a single voice reads everything.
+
+Picked from the popup on a game tab, a voice sticks to that site: English voice
+for Counterfeit Monkey, Italian voice for
+[Ghost Layer](https://xaltotun84.github.io/Ghost-Layer/play.html) (direct Quixe,
+same DOM). The per-site list can be reviewed and forgotten in Settings.
+
+### Kokoro local neural voice (experimental, opt-in)
+
+Settings → Voice engine → Kokoro: runs Kokoro-82M locally in the game tab
+(first run downloads ~85MB, then offline) — much more natural than OS voices,
+but English-only and not store-compliant yet (prototype). See
+[`docs/08-kokoro.md`](docs/08-kokoro.md).
+
 ## Install
 
 ### Chrome
@@ -78,7 +106,8 @@ Notes:
 | Permission | Why |
 |---|---|
 | `storage` | Persist voice / rate / pitch / toggles. Nothing leaves your device. |
-| `*://*.iplayif.com/*` | Observe the game DOM and inject the floating button. No remote code, no analytics. |
+| `*://*.iplayif.com/*` | Observe Parchment game DOM (e.g. Counterfeit Monkey) and inject the floating button. No remote code, no analytics. |
+| `*://xaltotun84.github.io/*` | Observe the direct-Quixe game page (Ghost Layer, same GlkOte DOM). No remote code, no analytics. |
 
 ## Project structure
 
@@ -86,6 +115,7 @@ Notes:
 manifest.json            # single MV3 manifest (Chrome + Firefox)
 src/content.js           # page observer + TTS queue + floating button
 src/background.js        # service worker (install defaults, state forwarding)
+src/kokoro/*             # experimental local neural backend (in-tab engine)
 src/popup.*              # toolbar popup UI
 src/options.*            # full settings page
 docs/                    # specs: architecture, Parchment DOM, TTS, test plan, roadmap

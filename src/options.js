@@ -5,15 +5,34 @@ const DEFAULTS = {
   autoRead: true,
   voiceURI: '',
   lang: 'it-IT',
-  rate: 1.0,
+  siteVoices: {},  rate: 1.0,
   pitch: 1.0,
   volume: 1.0,
   speakCommands: true,
   onlyMainWindow: true,
   chunkSize: 220,
   debounceMs: 600,
-  skipEmptyPrompt: true
+  skipEmptyPrompt: true,
+  ttsBackend: 'os',
+  kokoroVoice: 'af_heart',
+  siteVoices: {}
 };
+
+// Curated Kokoro English voices (voiceURI-style ids). All Kokoro v1 voices
+// are English (a* = American, b* = British); use the custom field below to
+// experiment with other ids. See docs/08-kokoro.md.
+const KOKORO_VOICES = [
+  ['af_heart', 'Heart (US female, recommended)'],
+  ['af_bella', 'Bella (US female)'],
+  ['af_nicole', 'Nicole (US female)'],
+  ['af_sarah', 'Sarah (US female)'],
+  ['am_adam', 'Adam (US male)'],
+  ['am_michael', 'Michael (US male)'],
+  ['bf_emma', 'Emma (UK female)'],
+  ['bf_isabella', 'Isabella (UK female)'],
+  ['bm_george', 'George (UK male)'],
+  ['bm_lewis', 'Lewis (UK male)']
+];
 
 const api = globalThis.chrome ?? globalThis.browser;
 
@@ -47,7 +66,7 @@ async function save(patch) {
   } catch (e) {}
   // Push live to any open game tabs (best effort).
   try {
-    const tabs = await promisify(api.tabs.query.bind(api.tabs), { url: '*://*.iplayif.com/*' });
+    const tabs = await promisify(api.tabs.query.bind(api.tabs), { url: ['*://*.iplayif.com/*', '*://xaltotun84.github.io/*'] });
     for (const t of tabs || []) {
       if (t?.id == null) continue;
       try { await promisify(api.tabs.sendMessage.bind(api.tabs), t.id, { type: 'ATS_SET', patch }); } catch (_) {}
@@ -117,6 +136,133 @@ async function boot() {
     voice.value = state.voiceURI;
   }
   voice.addEventListener('change', () => save({ voiceURI: voice.value }));
+
+  renderSiteVoices(state.siteVoices || {});
+  initKokoro(state);
+}
+
+function renderSiteVoices(map) {
+  const box = $('siteVoices');
+  box.textContent = '';
+  const hosts = Object.keys(map);
+  if (!hosts.length) {
+    const p = document.createElement('p');
+    p.className = 'hint';
+    p.textContent = 'None yet — open a game site and pick a voice from the popup.';
+    box.appendChild(p);
+    return;
+  }
+  for (const host of hosts.sort()) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    const label = document.createElement('span');
+    label.textContent = `${host} → ${map[host]}`;
+    label.style.overflowWrap = 'anywhere';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Forget';
+    btn.addEventListener('click', async () => {
+      const next = { ...(await load()).siteVoices };
+      delete next[host];
+      await save({ siteVoices: next });
+      renderSiteVoices(next);
+    });
+    row.appendChild(label);
+    row.appendChild(btn);
+    box.appendChild(row);
+  }
+}
+
+// ---------- Kokoro backend (experimental opt-in) ----------
+// The engine runs in-process in this page (extension origin, separate model
+// cache from the game tabs). Same code path on Chrome and Firefox.
+let kokoroEnginePromise = null;
+
+function kokoroProgressUpdate(p) {
+  if (!p) return;
+  if (typeof p.progress === 'number') $('kokoroProgress').value = Math.round(p.progress * 100);
+  else if (typeof p.loaded === 'number' && typeof p.total === 'number' && p.total > 0) {
+    $('kokoroProgress').value = Math.round((p.loaded / p.total) * 100);
+  }
+  kokoroNote(`Downloading: ${p.file || p.status || 'model files'}…`);
+}
+
+function getOptionsKokoroEngine() {
+  if (!kokoroEnginePromise) {
+    kokoroEnginePromise = import('./kokoro/engine.js')
+      .then((m) => m.createKokoroEngine({ onProgress: kokoroProgressUpdate }))
+      .catch((e) => { kokoroEnginePromise = null; throw e; });
+  }
+  return kokoroEnginePromise;
+}
+
+function kokoroNote(text) {
+  $('kokoroStatus').textContent = text;
+}
+
+function initKokoro(state) {
+  const backend = $('ttsBackend');
+  backend.value = state.ttsBackend === 'kokoro' ? 'kokoro' : 'os';
+  backend.addEventListener('change', () => {
+    save({ ttsBackend: backend.value });
+    refreshKokoroStatus();
+  });
+
+  const voice = $('kokoroVoice');
+  for (const [id, label] of KOKORO_VOICES) {
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = `${label} [${id}]`;
+    voice.appendChild(opt);
+  }
+  if (!KOKORO_VOICES.some(([id]) => id === state.kokoroVoice)) {
+    const opt = document.createElement('option');
+    opt.value = state.kokoroVoice;
+    opt.textContent = `${state.kokoroVoice} (custom)`;
+    voice.appendChild(opt);
+  }
+  voice.value = state.kokoroVoice;
+  voice.addEventListener('change', () => {
+    $('kokoroVoiceCustom').value = '';
+    save({ kokoroVoice: voice.value });
+  });
+
+  const custom = $('kokoroVoiceCustom');
+  custom.value = KOKORO_VOICES.some(([id]) => id === state.kokoroVoice) ? '' : state.kokoroVoice;
+  custom.addEventListener('change', () => {
+    const id = custom.value.trim();
+    if (id) save({ kokoroVoice: id });
+  });
+
+  $('kokoroPreload').addEventListener('click', async () => {
+    $('kokoroProgress').value = 0;
+    kokoroNote('Starting download… (first run fetches ~85MB, then works offline)');
+    try {
+      const engine = await getOptionsKokoroEngine();
+      await engine.preload();
+      $('kokoroProgress').value = 100;
+      kokoroNote('Model ready — cached for offline use. Select the Kokoro engine above to use it.');
+    } catch (e) {
+      kokoroNote(`Download failed: ${e?.message || e}. OS voices still work.`);
+    }
+  });
+
+  refreshKokoroStatus();
+}
+
+async function refreshKokoroStatus() {
+  if (!kokoroEnginePromise) {
+    kokoroNote('Model not downloaded yet — use the button above (~85MB, once).');
+    return;
+  }
+  try {
+    const res = await kokoroEnginePromise.then((e) => e.status());
+    if (res && res.loaded) kokoroNote('Model ready — cached for offline use.');
+    else if (res && res.loading) kokoroNote('Model is loading…');
+    else kokoroNote('Model not downloaded yet — use the button above (~85MB, once).');
+  } catch (e) {
+    kokoroNote('Kokoro status unavailable. OS voices still work.');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => boot().catch((e) => { $('status').textContent = String(e?.message || e); }));

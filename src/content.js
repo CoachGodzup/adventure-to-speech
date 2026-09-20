@@ -17,7 +17,11 @@
     onlyMainWindow: true,     // ignore GridWindow (status bar)
     chunkSize: 220,
     debounceMs: 600,
-    skipEmptyPrompt: true
+    skipEmptyPrompt: true,
+    ttsBackend: 'os',         // 'os' (speechSynthesis) or 'kokoro' (local neural, experimental)
+    kokoroVoice: 'af_heart',  // Kokoro voices are English-only (see docs/08-kokoro.md)
+    siteVoices: {}            // host -> voiceURI override (e.g. English voice for
+                              // Counterfeit Monkey, Italian voice for Ghost Layer)
   };
 
   let settings = { ...DEFAULTS };
@@ -59,11 +63,27 @@
     window.speechSynthesis.onvoiceschanged = refreshVoices;
   }
 
+  function siteKey() {
+    try { return window.location.host || ''; } catch (e) { return ''; }
+  }
+
+  // A voice picked while playing on a site sticks to that site, so an
+  // English game (Counterfeit Monkey) and an Italian one (Ghost Layer)
+  // can each keep their own voice. Falls back to the global voiceURI.
+  function effectiveVoiceURI() {
+    const host = siteKey();
+    if (host && settings.siteVoices && settings.siteVoices[host]) {
+      return settings.siteVoices[host];
+    }
+    return settings.voiceURI;
+  }
+
   function pickVoice() {
     refreshVoices();
     if (!voices.length) return null;
-    if (settings.voiceURI) {
-      const v = voices.find(v => v.voiceURI === settings.voiceURI);
+    const uri = effectiveVoiceURI();
+    if (uri) {
+      const v = voices.find(v => v.voiceURI === uri);
       if (v) return v;
     }
     // preferred set language, then it, then en, then default
@@ -131,29 +151,83 @@
     if (!settings.enabled) { speakQueue = []; return; }
     isSpeakingSequence = true;
     const item = speakQueue.shift();
-    const u = new SpeechSynthesisUtterance(item.text);
+    if (settings.ttsBackend === 'kokoro') {
+      speakKokoroChunk(item.text).then(finishChunk).catch((e) => {
+        if (String(e?.message || e) === 'kokoro-stopped') return finishChunk();
+        // Experimental backend failed: read this chunk with the OS voice
+        // instead of dropping it, then continue the queue.
+        console.warn('[AdvToSpeech] Kokoro failed, falling back to OS voice:', e);
+        speakOsChunk(item.text, finishChunk);
+      });
+    } else {
+      speakOsChunk(item.text, finishChunk);
+    }
+    notifyState();
+  }
+
+  function finishChunk() {
+    isSpeakingSequence = false;
+    // short pause between chunks
+    setTimeout(pumpQueue, 80);
+    notifyState();
+  }
+
+  function speakOsChunk(text, done) {
+    const u = new SpeechSynthesisUtterance(text);
     const voice = pickVoice();
     if (voice) u.voice = voice;
     u.lang = voice?.lang || settings.lang || 'it-IT';
     u.rate = settings.rate;
     u.pitch = settings.pitch;
     u.volume = settings.volume;
-    u.onend = u.onerror = () => {
-      isSpeakingSequence = false;
-      // short pause between chunks
-      setTimeout(pumpQueue, 80);
-      notifyState();
-    };
+    u.onend = u.onerror = done;
     try {
       window.speechSynthesis.speak(u);
     } catch (e) {
-      isSpeakingSequence = false;
+      done();
     }
-    notifyState();
+  }
+
+  // ---------- Kokoro backend (experimental opt-in) ----------
+  // The engine runs in-process in the game tab (same code path on Chrome
+  // and Firefox): synthesis + playback here, no offscreen document.
+  // Page CSP may block the CDN import — then we fall back to OS voices.
+  let kokoroEnginePromise = null;
+
+  function getKokoroEngine() {
+    if (!kokoroEnginePromise) {
+      const ext = (typeof chrome !== 'undefined' ? chrome : browser);
+      kokoroEnginePromise = import(ext.runtime.getURL('src/kokoro/engine.js'))
+        .then((m) => m.createKokoroEngine())
+        .catch((e) => { kokoroEnginePromise = null; throw e; });
+    }
+    return kokoroEnginePromise;
+  }
+
+  async function speakKokoroChunk(text) {
+    let engine;
+    try {
+      engine = await getKokoroEngine();
+    } catch (e) {
+      throw new Error('kokoro-unavailable');
+    }
+    const outcome = await engine.speak({
+      text,
+      voice: settings.kokoroVoice || 'af_heart',
+      speed: Math.min(2, Math.max(0.5, Number(settings.rate) || 1)),
+      volume: settings.volume
+    }).catch((e) => { throw new Error(String(e?.message || e)); });
+    if (outcome === 'stopped') throw new Error('kokoro-stopped');
+  }
+
+  function stopKokoro() {
+    // Never trigger a model download from a Stop action.
+    if (kokoroEnginePromise) kokoroEnginePromise.then((e) => e.stop()).catch(() => {});
   }
 
   function stopSpeaking(clearQueue = true) {
     try { window.speechSynthesis?.cancel(); } catch (e) {}
+    stopKokoro();
     if (clearQueue) speakQueue = [];
     isSpeakingSequence = false;
     notifyState();
@@ -324,7 +398,7 @@
     (async () => {
       switch (msg.type) {
         case 'ATS_GET_STATE':
-          sendResponse({ ...settings, speaking: isSpeakingSequence, queued: speakQueue.length, voices: voices.map(v => ({ voiceURI: v.voiceURI, name: v.name, lang: v.lang })) });
+          sendResponse({ ...settings, speaking: isSpeakingSequence, queued: speakQueue.length, voices: voices.map(v => ({ voiceURI: v.voiceURI, name: v.name, lang: v.lang })), host: siteKey(), siteVoiceURI: effectiveVoiceURI() });
           break;
         case 'ATS_TOGGLE':
           settings.enabled = !settings.enabled;
@@ -335,6 +409,20 @@
           break;
         case 'ATS_SET':
           Object.assign(settings, msg.patch || {});
+          // Switching engine/voice mid-speech must not mix backends.
+          if (msg.patch && (msg.patch.ttsBackend !== undefined || msg.patch.kokoroVoice !== undefined)) {
+            stopSpeaking(true);
+          }          // A voiceURI picked from the popup on a game page is remembered
+          // for that site (msg.site === true). Global changes from the
+          // options page carry no flag and never stamp open game tabs.
+          if (msg.site === true && msg.patch && msg.patch.voiceURI !== undefined) {
+            const host = siteKey();
+            if (host) {
+              settings.siteVoices = settings.siteVoices || {};
+              if (msg.patch.voiceURI) settings.siteVoices[host] = msg.patch.voiceURI;
+              else delete settings.siteVoices[host];
+            }
+          }
           saveSettings();
           sendResponse({ ok: true });
           break;

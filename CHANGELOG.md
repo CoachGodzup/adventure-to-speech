@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Second game host: `xaltotun84.github.io` (Ghost Layer, Italian, direct Quixe).
+- Per-site OS-voice memory: popup voice picks stick to the site (`siteVoices`
+  map), reviewable in the options page; options broadcasts never stamp open tabs.
+- Experimental opt-in Kokoro local neural backend (`src/kokoro/engine.js`,
+  in-process in the game tab and options page — same code path on Chrome and
+  Firefox; English-only voices, prototype, not store-compliant yet).
+  See `docs/08-kokoro.md`.
+
 ## [0.1.0] - 2026-09-18
 
 ### Added

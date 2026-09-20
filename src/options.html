@@ -77,6 +77,41 @@
     <input type="number" id="debounceMs" min="100" max="2000" step="50" value="600">
   </label>
 
+  <div class="col">
+    <span>Per-site voices (picked from the popup on each game site)</span>
+    <div id="siteVoices"><p class="hint">None yet — open a game site and pick a voice from the popup.</p></div>
+  </div>
+
+  <h1>Voice engine (experimental)</h1>
+
+  <label class="col">
+    <span>Engine</span>
+    <select id="ttsBackend">
+      <option value="os">OS voices (default)</option>
+      <option value="kokoro">Kokoro local neural voice (experimental)</option>
+    </select>
+  </label>
+
+  <label class="col">
+    <span>Kokoro voice (English)</span>
+    <select id="kokoroVoice"></select>
+  </label>
+
+  <label class="col">
+    <span>Custom Kokoro voice id (overrides the list above)</span>
+    <input type="text" id="kokoroVoiceCustom" placeholder="e.g. af_heart" autocomplete="off" spellcheck="false">
+  </label>
+
+  <div class="row buttons">
+    <button id="kokoroPreload" type="button">Download Kokoro model</button>
+  </div>
+  <progress id="kokoroProgress" max="100" value="0" style="width: 100%;"></progress>
+  <p class="hint" id="kokoroStatus">Kokoro not checked yet.</p>
+  <p class="hint">Prototype: first run downloads ~85MB of weights (q8) plus runtime files,
+    then works offline; the model is cached per site. Kokoro voices are English-only —
+    Italian games still need OS voices. Remote code must be vendored before any store
+    release. See docs/08-kokoro.md.</p>
+
   <p class="hint" id="status">Settings are stored locally (storage.sync); nothing leaves your device.</p>
 </main>
 <script type="module" src="options.js"></script>

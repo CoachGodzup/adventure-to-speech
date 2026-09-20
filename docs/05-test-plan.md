@@ -37,6 +37,21 @@ https://iplayif.com/?story=https%3A%2F%2Fgithub.com%2Fi7%2Fcounterfeit-monkey%2F
 - `look`, `x me`, `inventory`, `help`, `about`
 - These produce short, deterministic outputs — good for TTS assertions.
 
+## Second test game: Ghost Layer (Italian, direct Quixe)
+
+```
+https://xaltotun84.github.io/Ghost-Layer/play.html
+```
+
+Same GlkOte DOM as Parchment (`#windowport`, `.BufferWindow`, `.BufferLine`),
+no Parchment wrapper. Smoke test: load, click once, play a few commands.
+
+1. Pick an English voice on the Counterfeit Monkey tab, an Italian voice on the
+   Ghost Layer tab (popup → Voice). Reload both tabs.
+   EXPECT: each tab keeps its own voice (per-site memory in `siteVoices`).
+2. Options page → per-site list shows both hosts; Forget removes one.
+   EXPECT: that site falls back to the global voice.
+
 ## Automated checks (for `tts-qa` agent)
 
 - `node --check src/content.js src/background.js src/popup.js src/options.js`

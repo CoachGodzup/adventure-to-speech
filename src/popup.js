@@ -21,10 +21,11 @@ async function getActiveTab() {
   return tabs && tabs[0];
 }
 
-async function sendToTab(type, patch) {
+async function sendToTab(type, patch, site) {
   const tab = await getActiveTab();
   if (!tab?.id) throw new Error('No active tab');
   const msg = patch ? { type, patch } : { type };
+  if (site === true) msg.site = true;
   return promisify(api.tabs.sendMessage.bind(api.tabs), tab.id, msg);
 }
 
@@ -91,14 +92,22 @@ async function boot() {
 
   const s = {
     enabled: true, autoRead: true, speakCommands: true,
-    voiceURI: '', rate: 1.0, pitch: 1.0, volume: 1.0,
+    voiceURI: '', rate: 1.0, pitch: 1.0, volume: 1.0, ttsBackend: 'os',
     ...(state || {})
   };
 
   $('enabled').checked = !!s.enabled;
   $('autoRead').checked = !!s.autoRead;
   $('speakCommands').checked = !!s.speakCommands;
-  fillVoices($('voice'), state?.voices || [], s.voiceURI);
+  // The voice picked on a game tab sticks to that site (English voice for
+  // Counterfeit Monkey, Italian voice for Ghost Layer, ...).
+  const host = state?.host || '';
+  fillVoices($('voice'), state?.voices || [], state?.siteVoiceURI || s.voiceURI);
+  if (host) {
+    $('siteHint').textContent = state?.siteVoices?.[host]
+      ? `This site (${host}) uses its remembered voice. Pick another one to change it.`
+      : `The voice you pick here will be remembered for this site (${host}).`;
+  }
   bindSlider('rate', 'rateVal', 'rate', s);
   bindSlider('pitch', 'pitchVal', 'pitch', s);
   bindSlider('volume', 'volumeVal', 'volume', s);
@@ -106,6 +115,9 @@ async function boot() {
   if (state && state.speaking !== undefined) {
     setStatus(state.speaking ? 'Speaking…' : state.queued > 0 ? `Queued: ${state.queued}` : 'Idle.');
   }
+  $('backendHint').textContent = s.ttsBackend === 'kokoro'
+    ? 'Engine: Kokoro local neural voice (experimental). Change it in Settings.'
+    : '';
 
   $('enabled').addEventListener('change', async (e) => {
     try {
@@ -118,7 +130,14 @@ async function boot() {
 
   $('autoRead').addEventListener('change', (e) => setPatch({ autoRead: e.target.checked }).catch(() => {}));
   $('speakCommands').addEventListener('change', (e) => setPatch({ speakCommands: e.target.checked }).catch(() => {}));
-  $('voice').addEventListener('change', (e) => setPatch({ voiceURI: e.target.value }).catch(() => {}));
+  $('voice').addEventListener('change', async (e) => {
+    try {
+      await sendToTab('ATS_SET', { voiceURI: e.target.value }, true);
+      if (host) $('siteHint').textContent = `This site (${host}) uses its remembered voice. Pick another one to change it.`;
+    } catch (_) {
+      await setPatch({ voiceURI: e.target.value });
+    }
+  });
 
   $('readLast').addEventListener('click', async () => {
     try { await sendToTab('ATS_READ_LAST'); }
